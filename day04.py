@@ -50,7 +50,7 @@ def get_horiz_vert(array):
     vert_ud = array.T
     vert_du = np.flip(vert_ud, axis=None)
     horiz_vert = np.vstack((horiz_lr, horiz_rl, vert_ud, vert_du))
-    # mutate into list of strings
+    # transform into list of strings
     easy_stuff = ["".join(subarray) for subarray in horiz_vert] 
     return easy_stuff
 
@@ -69,7 +69,7 @@ def get_diags(array):
         diag_flip = np.flip(diag, axis=None)
         anti_diag = np.diagonal(np.flip(array, axis=1), offset=offset)
         anti_diag_flip = np.flip(anti_diag, axis=None)
-        # mutate into list of strings
+        # transform into list of strings
         temp = []
         temp.append("".join(diag))
         temp.append("".join(diag_flip))
@@ -99,6 +99,7 @@ def get_Xs(array):
     Full transparency - got this function from ChatGPT
     '''
     all = sliding_window_view(array, window_shape=(3,3))
+    # returns 4d hypercube, need to reshape
     reshaped = all.reshape(-1,3,3)
     return reshaped
 
@@ -132,8 +133,6 @@ def solve_b(array):
     print(f"Day 4, second = {count_Xs}")
 
 ### End of part 2 ###
-
-
 
 
 if __name__ == "__main__":
