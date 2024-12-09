@@ -59,7 +59,10 @@ def find_pt(walk_map):
     return (x,y)
 
 
-def move_pt(walk_map):
+def move_pt_1(walk_map):
+    '''
+    Have optimized for 75% time cost from original code, but still too slow
+    '''
     first_run = True
     loops = 0
     x,y = find_pt(walk_map)
@@ -69,30 +72,101 @@ def move_pt(walk_map):
         loops += 1
         x,y = find_pt(walk_map)
         walk_map[x,y] = np.int8(3)              # mark current square
+        #walk_map[x,y] = np.int8(0)
         walk_map[x-1,y] = np.int8(2)            # move pt up one
         if first_run == True and walk_map[x-2,y] == 1:
             turn_map_s = time.time()
-            walk_map = np.rot90(walk_map, k=1)
+            walk_map = np.flip(walk_map.T, axis=0)  # tiny benefit from rot90()
             turn_map_e = time.time()
             print(f"turn map took = {turn_map_e - turn_map_s:.8f}")
             first_run = False
         elif walk_map[x-2,y] == 1:
-            walk_map = np.rot90(walk_map, k=1)
+            walk_map = np.flip(walk_map.T, axis=0)
     print(f"took {loops} loops")
     return np.sum(walk_map == 3)
 
 
-if __name__ == "__main__":   
-    #walk_map = process(EXP_1)
-    #print(move_pt(walk_map))
+def test_bangs(bangs):
+    if len(bangs) < 8:
+        return False
+    b1 = bangs[-1] == bangs[-5]
+    b2 = bangs[-2] == bangs[-6]
+    b3 = bangs[-3] == bangs[-7]
+    b4 = bangs[-4] == bangs[-8]
+    if b1 and b2 and b3 and b4:
+        # This should indicate loop
+        return True
 
-    t_start = time.time()
-    input = get_data("input06.txt")
-    walk_map = process(input)
-    steps = move_pt(walk_map)
-    t_end = time.time()
-    print(f"Day 6, first = {steps}")
-    print(f"Time = {t_end - t_start:.6f}")
+
+def move_pt_2(walk_map):
+    '''
+    Forgoing additional optimization for now
+    Working on part 2 logic
+    '''
+    x,y = find_pt(walk_map)
+    outside = len(walk_map)
+    bangs = []                          # sound made when crashing into obj
+    while 0 < x < outside and 0 < y < outside:
+        x,y = find_pt(walk_map)
+        walk_map[x,y] = np.int8(0)      # Change current to empty
+        walk_map[x-1,y] = np.int8(2)    # move pt up one
+#        if [x,y] in bangs:
+#            return 1
+        if walk_map[x-2,y] == 1:
+            bangs.append([x,y])
+            walk_map = np.flip(walk_map.T, axis=0)  # tiny benefit from rot90()
+        if test_bangs(bangs):
+            return 1
+    return 0
+
+
+def test_all_sqrs(walk_map):
+    circles = 0
+    outside = len(walk_map)
+    for i in range(0,outside):
+        for j in range(0,outside):
+            new_map = walk_map.copy()
+            # excluding 2 below may be logic flaw - consider further
+            if new_map[i,j] not in (1,2):
+                new_map[i,j] = 1
+                print(f"x,y == {i,j} and circles == {circles}")
+                circles += move_pt_2(new_map)
+    return circles
+
+
+# Esh - giving up for now, moving on to Day 7
+# In example, option 5, we place obj at (8,3)
+# This loops, but not in a convenient square loop, so test_bangs() doesn't work
+# Need to find better bool algorithm
+# Also, as this gets more expensive need to either:
+#   Rewrite without using map turns
+#   Add mutli-threading to boost run time performance
+
+
+if __name__ == "__main__":   
+    # Example
+    walk_map = process(EXP_1)
+    #print(move_pt_2(walk_map))
+    print(test_all_sqrs(walk_map))
+
+    ## Part 1
+    #t_start = time.time()
+    #input = get_data("input06.txt")
+    #walk_map = process(input)
+    #steps = move_pt_1(walk_map)
+    #t_end = time.time()
+    #print(f"Day 6, first = {steps}")
+    #print(f"Time = {t_end - t_start:.6f}")
+
+    ## Part 2
+    #t_start = time.time()
+    #input = get_data("input06.txt")
+    #walk_map = process(input)
+    #steps = move_pt_2(walk_map)
+    #t_end = time.time()
+    #print(f"Day 6, second = {steps}")
+    #print(f"Time = {t_end - t_start:.6f}")
+
 
 
 
