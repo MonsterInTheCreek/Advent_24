@@ -93,6 +93,13 @@ def count_walks(graph, all_0, all_9):
                 walks += 1
     return walks
 
+def count_paths(graph, all_0, all_9):
+    paths = 0
+    for one_0 in all_0:
+        for one_9 in all_9:
+            p = list(nx.all_simple_paths(graph, tuple(one_0), tuple(one_9)))
+            paths += len(p)
+    return paths
 
 if __name__ == "__main__":
     # dataset = EXP_1
@@ -107,9 +114,10 @@ if __name__ == "__main__":
     array = process(dataset)
     graph, all_0, all_9 = build_struct_array(array)
     g_edges = graph.edges()  
-    walks = count_walks(graph, all_0, all_9)
-    print(walks)
-
+    #walks = count_walks(graph, all_0, all_9)
+    #print(walks)
+    paths = count_paths(graph, all_0, all_9)
+    print(paths)
 
 
 
