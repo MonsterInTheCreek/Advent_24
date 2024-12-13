@@ -48,7 +48,7 @@ def process(dataset):
 
 
 def build_struct_array(array):
-    graph = nx.Graph()              # instantiate networkx graph obj
+    graph = nx.DiGraph()            # instantiate networkx graph obj
     dim = array.shape[0]            # assumes square
     up = np.array([-1,0])
     down = np.array([1,0])
@@ -60,7 +60,6 @@ def build_struct_array(array):
     # consider rewriting as vectorized
     for i in range(0,dim):          # i is up/down
         for j in range(0,dim):      # j is r/l
-            #i, j = 1, 1             # debug
             here = np.array([i,j])
             here_val = array[i,j]
             neighs = np.array([
@@ -73,71 +72,43 @@ def build_struct_array(array):
             neighs = neighs[np.all(neighs < dim, axis=1)]       
             for elem in neighs:
                 elem_val = array[tuple(elem)]
-
-                # debug
-                #print(here)
-                #print(here_val)
-                #print(elem)
-                #print(elem_val)
-                #for neigh in neighs:
-                #    print(f"{repr(neigh)} = {array[tuple(neigh)]}")
-                #print(array)
-                #input()
-
-                if abs(here_val - elem_val) == 1:
-                    graph.add_edge(tuple(elem),(i,j))
-                else:
-                    pass    # ignore
+                if here_val - elem_val == 1:
+                    graph.add_edge(tuple(elem), (i,j))
+                elif elem_val - here_val == 1:
+                    graph.add_edge((i,j), tuple(elem))
             # build coords for endpoints 0 and 9
             if here_val == 0:
                 all_0.append([i,j])
             elif here_val == 9:
                 all_9.append([i,j])
-            else:
-                pass    # ignore
     # returned graph not all obj are numpy ints, why?
     return graph, all_0, all_9
 
-    # debug:
-    #   Working mostly - periphery and center mostly correct
-    #   all source numbers appear to be in output
-    #   false positive = (0,6), (0,5)  &  (0,3), (1,3)
-    #   false negative = (0,6), (1,6)
-    #   review concern re array[x,y] != array[np.array(x,y)]
 
 def count_walks(graph, all_0, all_9):
-    walks = []
-    
-    # debug
-    #print(nx.has_path(graph, (6,0), (4,5)))
-    #print(graph.nodes())
-    #print(graph.edges())
-    #input()
-    
+    walks = 0
     for one_0 in all_0:
         for one_9 in all_9:
-            #print(all_0)
-            #print(all_9)
-            #input()
             if nx.has_path(graph, tuple(one_0), tuple(one_9)):
-                walks.append([one_0,one_9])
+                walks += 1
     return walks
 
+
 if __name__ == "__main__":
-    dataset = EXP_1
+    # dataset = EXP_1
+    # array = process(dataset)
+    # graph, all_0, all_9 = build_struct_array(array)
+    # g_edges = graph.edges() 
+    # walks = count_walks(graph, all_0, all_9)
+    # print(walks)
+
+
+    dataset = get_data("input10.txt")
     array = process(dataset)
     graph, all_0, all_9 = build_struct_array(array)
-    g_edges = graph.edges()
-    #for edge in g_edges:
-    #    print(f"x1 = {int(edge[0][0])}, y1 = {int(edge[0][1])}, \
-    #        x2 = {int(edge[1][0])}, y2 = {int(edge[1][1])}")    
+    g_edges = graph.edges()  
     walks = count_walks(graph, all_0, all_9)
-    for walk in walks:
-        print(walk)
-
-
-    #dataset = get_data("input10.txt")
-    #hike_map = process(dataset)
+    print(walks)
 
 
 
