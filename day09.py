@@ -6,6 +6,8 @@
 
 # CURRENTLY THIS CODE PASSES PART 1 EXAMPLE, BUT DOESN'T PASS SOURCE INPUT
 # EFFECTIVELY PART 1 STILL INCOMPLETE
+# Good Reddit thread for edge cases:
+# https://www.reddit.com/r/adventofcode/comments/1ha7bab/humor_based_on_my_pain/
 
 # Description examples:
 #   "90909"  --> 999 (1 + 0 free + 9 + 0 free + 9)
