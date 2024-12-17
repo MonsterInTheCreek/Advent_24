@@ -50,8 +50,8 @@ def process(dataset):
 def build_struct_array(array):
     graph = nx.DiGraph()            # instantiate networkx graph obj
     dim = array.shape[0]            # assumes square
-    up = np.array([-1,0])
-    down = np.array([1,0])
+    up = np.array([-1,0])           # dumbass, I swapped x and y
+    down = np.array([1,0])          # but too late now, the code works
     left = np.array([0,-1])
     right = np.array([0,1])
     all_0 = []                      # no math or freq access
