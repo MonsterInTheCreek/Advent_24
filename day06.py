@@ -4,8 +4,7 @@
 # Source is fully "." and "#" chars only, except one "^" char at (46,43)
 # Find the steps?  # https://www.youtube.com/watch?v=S8D1YyNuunQ
 
-# Early optimization may be the root of all evil, but I had to spend a long
-# time optimizing this to have a shot at running part 2 in less than hours.
+### Completely refactored original code to optimize for Part 2
 
 import numpy as np
 import time
@@ -30,193 +29,166 @@ def get_data(file):
         return source.readlines()
 
 
+####### Part 1:
+
+
 def process(dataset):
-    prep = [list(row[:-1]) for row in dataset]
-    walk_map = np.array(prep)
-    # Added for part 2 optimization - rework dataset as ints
-    #   . --> 0
-    #   # --> 1
-    #   ^ --> 2
-    #   X --> 3
-    cond_map = [
-        walk_map == ".",
-        walk_map == "#",
-        walk_map == "^",
-        ]
-    output_map = np.array([0,1,2], dtype=np.int8)   # np.int8 tiny mem benefit
-    walk_map = np.select(cond_map, output_map)
-
-    return walk_map
-
-
-def find_pt(walk_map):
-    '''
-    Return xy coords for current pointer anywhere on map
-    '''
-    start_pt = np.argwhere(walk_map == 2)
-    x = start_pt[0][0]
-    y = start_pt[0][1]
-    return (x,y)
+    # remove whitespace, and change symbols to numbers
+    # find guard pos, change to 0, return guard pos and lab map
+    cleaned = []
+    row_num = 0
+    for row in dataset:
+        new_row = list(row.strip())
+        char_map = {".":np.int8(0),"#":np.int8(1),"^":np.int8(2)}
+        row_list = [char_map[let] for let in new_row]
+        if 2 in row_list:       # capture initial guard position, and remove
+            guard_i = row_list.index(2)
+            guard = np.array((row_num, guard_i))
+            row_list[guard_i] = 0
+        cleaned.append(row_list)
+        row_num += 1
+    lab_map = np.array(cleaned)
+    return guard, lab_map
 
 
-def move_pt_1(walk_map):
-    '''
-    Have optimized for 75% time cost from original code, but still too slow
-    '''
+def next_dir(dir):
+    # always turn right
+    dir_map = {"up":"right","right":"down","down":"left","left":"up"}
+    return dir_map[dir]
+
+
+def move_guard(guard, dir, log, lab_map):
+    up = np.array([-1,0])
+    down = np.array([1,0])
+    left = np.array([0,-1])
+    right = np.array([0,1])
+    dir_map = {"up":up, "down":down, "left":left, "right":right}
+    next_pos = guard + dir_map[dir]
+    try:
+        next_val = lab_map[tuple(next_pos)]
+    except IndexError:
+        # return arbitrary out of bounds value to break while loop
+        log.add(tuple(guard))
+        return np.array([-42,-42]), dir, log, lab_map
+    if next_val == 1:       # do nothing but turn 90 degrees
+        return guard, next_dir(dir), log, lab_map
+    else:
+        log.add(tuple(guard))
+        return next_pos, dir, log, lab_map
+
+
+def loop_guard(guard, lab_map):
+    outside = len(lab_map)
+    x,y = guard
     first_run = True
-    loops = 0
-    x,y = find_pt(walk_map)
-    outside = len(walk_map)
-    #while not (x == 0 or y == 0 or x == outside_dim or y == outside_dim):
+    start = time.time()
     while 0 < x < outside and 0 < y < outside:
-        loops += 1
-        x,y = find_pt(walk_map)
-        walk_map[x,y] = np.int8(3)              # mark current square
-        #walk_map[x,y] = np.int8(0)
-        walk_map[x-1,y] = np.int8(2)            # move pt up one
-        if first_run == True and walk_map[x-2,y] == 1:
-            turn_map_s = time.time()
-            walk_map = np.flip(walk_map.T, axis=0)  # tiny benefit from rot90()
-            turn_map_e = time.time()
-            print(f"turn map took = {turn_map_e - turn_map_s:.8f}")
+        current = time.time()
+        if first_run:
+            guard, dir, log, lab_map = move_guard(guard, "up", set(), lab_map)
+            first_run = False      
+        else:
+            guard, dir, log, lab_map = move_guard(guard, dir, log, lab_map)
+        x,y = guard
+    return log
+
+
+####### Part 2 - optimized: remove log overhead
+    # Tried optimizing using boolean True and False values instead of
+    # np.int8 data type, but oddly bools were 20% slower
+    # Clearly there are faster ways to do this
+    # But my first try at Part 1 was going to take about four hours.  Now runs
+    # in ~15 minutes.
+
+
+def process_pt2(dataset):
+    # remove whitespace, and change symbols to numbers
+    # find guard pos, change to False, return guard pos and lab map
+    cleaned = []
+    row_num = 0
+    for row in dataset:
+        new_row = list(row.strip())
+        char_map = {".":np.int8(0),"#":np.int8(1),"^":np.int8(2)}
+        row_list = [char_map[let] for let in new_row]
+        if 2 in row_list:       # capture initial guard position, and remove
+            guard_i = row_list.index(2)
+            guard = np.array((row_num, guard_i))
+            row_list[guard_i] = 0
+        cleaned.append(row_list)
+        row_num += 1
+    lab_map = np.array(cleaned)
+    return guard, lab_map
+
+
+def move_guard_pt2(guard, dir, lab_map):
+    up = np.array([-1,0])
+    down = np.array([1,0])
+    left = np.array([0,-1])
+    right = np.array([0,1])
+    dir_map = {"up":up, "down":down, "left":left, "right":right}
+    next_pos = guard + dir_map[dir]
+    try:
+        next_val = lab_map[tuple(next_pos)]
+    except IndexError:
+        # return arbitrary out of bounds value to break while loop
+        return np.array([-42,-42]), dir, lab_map
+    if next_val == 1:       # do nothing but turn 90 degrees
+        return guard, next_dir(dir), lab_map
+    else:
+        return next_pos, dir, lab_map
+
+
+def loop_guard_pt2(guard, lab_map):
+    outside = len(lab_map)
+    x,y = guard
+    first_run = True
+    start = time.time()
+    while 0 < x < outside and 0 < y < outside:
+        current = time.time()
+        if first_run:
+            guard, dir, lab_map = move_guard_pt2(guard, "up", lab_map)
             first_run = False
-        elif walk_map[x-2,y] == 1:
-            walk_map = np.flip(walk_map.T, axis=0)
-    print(f"took {loops} loops")
-    return np.sum(walk_map == 3)
+        elif current - start >= 0.25:      # if run time > 0.25 sec, inf loop
+            return 1       
+        else:
+            guard, dir, lab_map = move_guard_pt2(guard, dir, lab_map)
+        x,y = guard
+    # Only return if infinite loop
 
 
-def test_bangs(bangs):
-    if len(bangs) < 8:
-        return False
-    b1 = bangs[-1] == bangs[-5]
-    b2 = bangs[-2] == bangs[-6]
-    b3 = bangs[-3] == bangs[-7]
-    b4 = bangs[-4] == bangs[-8]
-    if b1 and b2 and b3 and b4:
-        # This should indicate loop
-        return True
-
-
-def move_pt_2(walk_map):
-    '''
-    Forgoing additional optimization for now
-    Working on part 2 logic
-    '''
-    x,y = find_pt(walk_map)
-    outside = len(walk_map)
-    bangs = []                          # sound made when crashing into obj
-    while 0 < x < outside and 0 < y < outside:
-        x,y = find_pt(walk_map)
-        walk_map[x,y] = np.int8(0)      # Change current to empty
-        walk_map[x-1,y] = np.int8(2)    # move pt up one
-#        if [x,y] in bangs:
-#            return 1
-        if walk_map[x-2,y] == 1:
-            bangs.append([x,y])
-            walk_map = np.flip(walk_map.T, axis=0)  # tiny benefit from rot90()
-        if test_bangs(bangs):
-            return 1
-    return 0
-
-
-def test_all_sqrs(walk_map):
+def find_loopers(guard, lab_map):
     circles = 0
-    outside = len(walk_map)
+    outside = len(lab_map)
+    # start = time.time()
     for i in range(0,outside):
         for j in range(0,outside):
-            new_map = walk_map.copy()
-            # excluding 2 below may be logic flaw - consider further
-            if new_map[i,j] not in (1,2):
-                new_map[i,j] = 1
-                print(f"x,y == {i,j} and circles == {circles}")
-                circles += move_pt_2(new_map)
+            # this is not fast, can perform ~25 loop_guard() per second
+            # if [i,j] == [0,25]:
+            #     end = time.time()
+            #     print(f"25 runs took {end - start:.2f}")
+            #     input()
+            new_map = lab_map.copy()
+            new_map[i,j] = 1
+            if loop_guard_pt2(guard, new_map) == 1:
+                circles += 1
+                print(f"circles = {circles} at {i},{j}")
+            else:
+                print(f"add block to {i},{j}")
+                pass  # ignore
     return circles
 
 
-# Esh - giving up for now, moving on to Day 7
-# In example, option 5, we place obj at (8,3)
-# This loops, but not in a convenient square loop, so test_bangs() doesn't work
-# Need to find better bool algorithm
-# Also, as this gets more expensive need to either:
-#   Rewrite without using map turns
-#   Add mutli-threading to boost run time performance
+if __name__ == "__main__":
+    #dataset = EXP_1
+    dataset = get_data("input06.txt")
 
+    # part 1:
+    #guard, lab_map = process(dataset)
+    #log = loop_guard(guard, lab_map)
+    #print(len(log))
 
-if __name__ == "__main__":   
-    # Example
-    walk_map = process(EXP_1)
-    #print(move_pt_2(walk_map))
-    print(test_all_sqrs(walk_map))
+    # part 2:
+    guard, lab_map = process_pt2(dataset)
+    circles = find_loopers(guard, lab_map)
+    print(circles)
 
-    ## Part 1
-    #t_start = time.time()
-    #input = get_data("input06.txt")
-    #walk_map = process(input)
-    #steps = move_pt_1(walk_map)
-    #t_end = time.time()
-    #print(f"Day 6, first = {steps}")
-    #print(f"Time = {t_end - t_start:.6f}")
-
-    ## Part 2
-    #t_start = time.time()
-    #input = get_data("input06.txt")
-    #walk_map = process(input)
-    #steps = move_pt_2(walk_map)
-    #t_end = time.time()
-    #print(f"Day 6, second = {steps}")
-    #print(f"Time = {t_end - t_start:.6f}")
-
-
-
-
-### Full version of move_pt() including debug statements
-# This is the original and improved recursive logic that I used to solve part 1
-
-# I had the main logic of this working pretty quick
-# But it took hours to figure out:
-#   How to initiate exit at overflow
-#       Initially used try/except, but that didn't want to work well
-#   How to gracefully exit the recursion
-"""
-
-## Original Recursive logic
-def move_pt(walk_map):
-    x,y,_ = find_pt(walk_map)
-    outside_dim = len(walk_map)
-    while walk_map[x-1,y] in [".","X"]:
-        if x == 0 or y == 0 or x == outside_dim or y == outside_dim:
-            return np.sum(walk_map == "X")+1
-            #print(np.sum(walk_map == "X")+1)   
-            #exit()                             # crappy exit
-        #print(x,y)                             # Used for debug
-        walk_map[x,y] = "X"                     # mark current square
-        walk_map[x-1,y] = "^"                   # move pt up one
-        x,y,_ = find_pt(walk_map)               # update xy coords
-    #print(walk_map)                             # Used for debug
-    #print(np.sum(walk_map == "X")+1)            # Used for debug
-    #input("Press Enter to continue...")         # Used for debug
-
-    new_map = np.rot90(walk_map, k=1)
-    return move_pt(new_map)  
-
-## Improved Recursive logic
-def move_pt_rec(walk_map):
-    '''
-    Original version, using recursive loop.
-    Always moving forward, leave X trail behind until obstacle, then turn map.
-    And recursive loop.  See below for original debug version, and notes.
-    '''
-    x,y,_ = find_pt(walk_map)
-    outside_dim = len(walk_map)
-
-    while walk_map[x-1,y] in [".","X"]:
-        if x == 0 or y == 0 or x == outside_dim or y == outside_dim:
-            return np.sum(walk_map == "X")+1    # return count of Xs
-        walk_map[x,y] = "X"                     # mark current square
-        walk_map[x-1,y] = "^"                   # move pt up one
-        x,y,_ = find_pt(walk_map)               # update xy coords
-
-    new_map = np.rot90(walk_map, k=1)           # turn map
-    return move_pt_rec(new_map)                # recurse
-"""
